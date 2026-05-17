@@ -9,23 +9,20 @@ interface CompliancePanelProps {
 
 const FLAG_INFO: Record<string, { name: string; desc: string }> = {
   gdpr:  { name: "GDPR",  desc: "EU Data Protection" },
-  ccpa:  { name: "CCPA",  desc: "CA Consumer Privacy" },
+  ccpa:  { name: "CCPA",  desc: "California Consumer Privacy" },
   labor: { name: "Labor", desc: "Labor Law" },
   ucpa:  { name: "UCPA",  desc: "Utah Consumer Privacy" },
 };
 
-
 export default function CompliancePanel({ analysis, onFlagClick }: CompliancePanelProps) {
-  // Safe array guards
   const findings = Array.isArray(analysis?.prosecutorFindings) ? analysis.prosecutorFindings : [];
   const verdicts  = Array.isArray(analysis?.judgeVerdicts)     ? analysis.judgeVerdicts     : [];
 
-  // For each compliance key: collect clause IDs where riskScore > 40 (violation)
-  // vs flagged but judge scored ≤ 40 (overruled). Use String() comparison for IDs.
   function hasFlag(finding: typeof findings[number], keyword: string): boolean {
     return Array.isArray(finding?.complianceFlags) &&
       finding.complianceFlags.some((f) => String(f).toLowerCase().includes(keyword));
   }
+
   function judgeScore(clauseId: string): number {
     const v = verdicts.find((j) => String(j.clauseId) === String(clauseId));
     return v?.riskScore ?? 0;
@@ -38,76 +35,78 @@ export default function CompliancePanel({ analysis, onFlagClick }: CompliancePan
     const clauseId = finding?.clauseId;
     if (!clauseId) continue;
     const score = judgeScore(String(clauseId));
-
     for (const key of ["gdpr", "ccpa", "labor", "ucpa"] as const) {
       if (!hasFlag(finding, key)) continue;
-      if (score > 40) {
-        violations[key].push(String(clauseId));
-      } else {
-        overruled[key].push(String(clauseId));
-      }
+      if (score > 40) violations[key].push(String(clauseId));
+      else            overruled[key].push(String(clauseId));
     }
   }
 
   const anyViolation = Object.values(violations).some((ids) => ids.length > 0);
-  const anyOverruled = Object.values(overruled).some((ids)  => ids.length > 0);
+  const anyOverruled  = Object.values(overruled).some((ids)  => ids.length > 0);
 
   if (!anyViolation && !anyOverruled) {
     return (
-      <div>
-        <div className="text-[10px] tracking-widest text-gray-500 mb-3 font-bold">COMPLIANCE CHECK</div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded" style={{ backgroundColor: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.15)" }}>
-          <span className="text-emerald-400">✓</span>
-          <span className="text-xs text-emerald-500">No issues detected</span>
+      <div style={{ fontFamily: "var(--font-sans)" }}>
+        <div className="gl-label" style={{ color: "var(--text-muted)", marginBottom: "12px" }}>
+          Compliance
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "12px 14px",
+            borderRadius: "var(--r-sm)",
+            backgroundColor: "rgba(122,158,138,0.07)",
+            border: "1px solid rgba(122,158,138,0.18)",
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--risk-safe)" strokeWidth="1.5">
+            <polyline points="1.5 7.5 5 11 12.5 3.5" />
+          </svg>
+          <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--risk-safe)" }}>No issues detected</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="text-[10px] tracking-widest text-gray-500 mb-3 font-bold">COMPLIANCE CHECK</div>
-      <div className="space-y-1.5">
+    <div style={{ fontFamily: "var(--font-sans)" }}>
+      <div className="gl-label" style={{ color: "var(--text-muted)", marginBottom: "12px" }}>
+        Compliance
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         {(["gdpr", "ccpa", "labor", "ucpa"] as const).map((key) => {
           const vIds = violations[key];
           const oIds = overruled[key];
           const info = FLAG_INFO[key];
 
-          // Determine state
           const hasViolation = vIds.length > 0;
           const hasOverruled = oIds.length > 0;
           const isClean      = !hasViolation && !hasOverruled;
-
-          const targetId = hasViolation ? vIds[0] : hasOverruled ? oIds[0] : null;
+          const targetId     = hasViolation ? vIds[0] : hasOverruled ? oIds[0] : null;
 
           let badgeText: string;
-          let badgeColor: string;
-          let badgeBg: string;
-          let badgeBorder: string;
+          let statusColor: string;
           let rowBg: string;
-          let labelColor: string;
+          let rowBorder: string;
 
           if (hasViolation) {
-            badgeText   = `✗ ${vIds.length} clause${vIds.length > 1 ? "s" : ""}`;
-            badgeColor  = "#EF4444";
-            badgeBg     = "rgba(239,68,68,0.12)";
-            badgeBorder = "rgba(239,68,68,0.3)";
-            rowBg       = "rgba(239,68,68,0.06)";
-            labelColor  = "#fca5a5";
+            badgeText   = `${vIds.length} clause${vIds.length > 1 ? "s" : ""}`;
+            statusColor = "var(--risk-critical)";
+            rowBg       = "var(--risk-critical-bg)";
+            rowBorder   = "var(--risk-critical-border)";
           } else if (hasOverruled) {
-            badgeText   = "✓ Overruled";
-            badgeColor  = "#22C55E";
-            badgeBg     = "rgba(34,197,94,0.10)";
-            badgeBorder = "rgba(34,197,94,0.25)";
-            rowBg       = "rgba(34,197,94,0.04)";
-            labelColor  = "#86efac";
+            badgeText   = "Overruled";
+            statusColor = "var(--risk-safe)";
+            rowBg       = "var(--risk-safe-bg)";
+            rowBorder   = "var(--risk-safe-border)";
           } else {
-            badgeText   = "✓ OK";
-            badgeColor  = "#22C55E";
-            badgeBg     = "rgba(34,197,94,0.10)";
-            badgeBorder = "rgba(34,197,94,0.25)";
+            badgeText   = "Clear";
+            statusColor = "var(--text-muted)";
             rowBg       = "transparent";
-            labelColor  = "#6b7280";
+            rowBorder   = "transparent";
           }
 
           return (
@@ -115,24 +114,53 @@ export default function CompliancePanel({ analysis, onFlagClick }: CompliancePan
               key={key}
               disabled={isClean || targetId === null}
               onClick={() => targetId && onFlagClick?.(targetId)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded text-left transition-colors"
               style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "9px 12px",
+                borderRadius: "var(--r-sm)",
+                border: `1px solid ${rowBorder}`,
                 backgroundColor: rowBg,
                 cursor: !isClean && targetId ? "pointer" : "default",
+                textAlign: "left",
+                transition: "all 0.15s ease",
+                width: "100%",
               }}
             >
               <div>
-                <div className="text-xs font-bold" style={{ color: labelColor }}>{info.name}</div>
-                <div className="text-[9px] text-gray-600">
-                  {hasOverruled && !hasViolation
-                    ? "Flagged, overruled by judge"
-                    : info.desc}
+                <div style={{ fontSize: "12px", fontWeight: 500, color: isClean ? "var(--text-muted)" : statusColor }}>
+                  {info.name}
+                </div>
+                <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "1px" }}>
+                  {info.desc}
                 </div>
               </div>
               <div
-                className="text-[9px] font-bold px-2 py-0.5 rounded border flex-shrink-0 ml-2"
-                style={{ color: badgeColor, backgroundColor: badgeBg, borderColor: badgeBorder }}
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 500,
+                  letterSpacing: "0.04em",
+                  color: statusColor,
+                  flexShrink: 0,
+                  marginLeft: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
               >
+                {hasViolation && (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="5" cy="5" r="4" />
+                    <line x1="5" y1="3" x2="5" y2="5.5" />
+                    <circle cx="5" cy="7" r="0.5" fill="currentColor" />
+                  </svg>
+                )}
+                {hasOverruled && (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <polyline points="1.5 5.5 3.5 7.5 8.5 2.5" />
+                  </svg>
+                )}
                 {badgeText}
               </div>
             </button>

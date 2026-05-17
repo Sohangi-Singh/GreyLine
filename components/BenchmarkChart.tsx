@@ -13,15 +13,14 @@ function parsePercentile(text: string): number {
 }
 
 const WORSE_KEYWORDS = [
-  "broader than", "more restrictive", "longer than", "higher than",
-  "stricter than", "greater than", "exceeds", "above average",
-  "more aggressive", "more onerous", "wider than", "larger than",
-  "heavier than", "more burdensome",
+  "broader than","more restrictive","longer than","higher than","stricter than",
+  "greater than","exceeds","above average","more aggressive","more onerous",
+  "wider than","larger than","heavier than","more burdensome",
 ];
 const BETTER_KEYWORDS = [
-  "shorter than", "fairer than", "less restrictive", "lower than",
-  "more reasonable", "better than", "below average", "narrower than",
-  "smaller than", "lighter than", "more favorable", "more favourable",
+  "shorter than","fairer than","less restrictive","lower than","more reasonable",
+  "better than","below average","narrower than","smaller than","lighter than",
+  "more favorable","more favourable",
 ];
 
 function isWorse(note: string, pct: number): boolean {
@@ -31,19 +30,19 @@ function isWorse(note: string, pct: number): boolean {
   return pct > 50;
 }
 
-function extractBenchmarkLabel(note: string): string {
-  if (note.toLowerCase().includes("non-compete")) return "Non-compete scope";
-  if (note.toLowerCase().includes("data retention")) return "Data retention";
-  if (note.toLowerCase().includes("termination")) return "Termination notice";
-  if (note.toLowerCase().includes("arbitration")) return "Arbitration clause";
-  if (note.toLowerCase().includes("ip") || note.toLowerCase().includes("intellectual property")) return "IP assignment";
-  if (note.toLowerCase().includes("liability")) return "Liability cap";
-  if (note.toLowerCase().includes("payment")) return "Payment terms";
-  if (note.toLowerCase().includes("privacy") || note.toLowerCase().includes("data")) return "Data clause";
+function extractLabel(note: string): string {
+  if (note.toLowerCase().includes("non-compete"))          return "Non-compete scope";
+  if (note.toLowerCase().includes("data retention"))       return "Data retention";
+  if (note.toLowerCase().includes("termination"))          return "Termination notice";
+  if (note.toLowerCase().includes("arbitration"))          return "Arbitration";
+  if (/\bip\b|intellectual property/i.test(note))         return "IP assignment";
+  if (note.toLowerCase().includes("liability"))            return "Liability cap";
+  if (note.toLowerCase().includes("payment"))              return "Payment terms";
+  if (/privacy|data/i.test(note))                          return "Data clause";
   return note.split(" ").slice(0, 3).join(" ") + "…";
 }
 
-export default function BenchmarkChart({ defenderFindings, overallRiskScore = 50 }: BenchmarkChartProps) {
+export default function BenchmarkChart({ defenderFindings }: BenchmarkChartProps) {
   const findings = (Array.isArray(defenderFindings) ? defenderFindings : [])
     .filter((f) => f.percentileEstimate && f.industryBenchmarkNote)
     .slice(0, 5);
@@ -51,56 +50,75 @@ export default function BenchmarkChart({ defenderFindings, overallRiskScore = 50
   if (findings.length === 0) return null;
 
   const bars = findings.map((f) => {
-    const pct = parsePercentile(f.percentileEstimate);
-    return { f, pct, worse: isWorse(f.industryBenchmarkNote, pct) };
+    const pct  = parsePercentile(f.percentileEstimate);
+    const worse = isWorse(f.industryBenchmarkNote, pct);
+    return { f, pct, worse };
   });
 
-  const favourableCount = bars.filter((b) => !b.worse).length;
-  const isFavourable = overallRiskScore < 40 || favourableCount >= bars.length / 2;
-
   return (
-    <div>
-      <div className="mb-3">
-        <div
-          className="text-[10px] tracking-widest font-bold"
-          style={{ color: isFavourable ? "#22C55E" : "#9CA3AF" }}
-        >
-          BENCHMARK COMPARISON{isFavourable ? " — Favourable" : ""}
-        </div>
-        <div className="text-[9px] text-gray-600 mt-0.5">
-          How this document compares to similar agreements
-        </div>
+    <div style={{ fontFamily: "var(--font-sans)" }}>
+      <div className="gl-label" style={{ color: "var(--text-muted)", marginBottom: "4px" }}>
+        Industry Benchmark
+      </div>
+      <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "16px", lineHeight: 1.5 }}>
+        How this document compares to similar agreements
       </div>
 
-      <div className="space-y-3">
+      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
         {bars.map(({ f, pct, worse }, i) => {
-          const label     = extractBenchmarkLabel(f.industryBenchmarkNote);
-          const barColor  = worse ? "#EF4444" : "#22C55E";
-          const textColor = worse ? "#fca5a5" : "#86efac";
-          const badgeText = worse ? `More restrictive than ${pct}%` : `Fairer than ${pct}%`;
+          const barColor  = worse ? "var(--risk-critical)" : "var(--risk-safe)";
+          const textColor = worse ? "var(--risk-critical)" : "var(--risk-safe)";
+          const summary   = worse ? `More restrictive than ${pct}%` : `Fairer than ${pct}%`;
 
           return (
             <div key={i}>
-              <div className="flex justify-between items-baseline mb-1">
-                <span className="text-[9px] text-gray-400 truncate max-w-[110px]">{label}</span>
-                <span className="text-[9px] font-bold flex-shrink-0 ml-1" style={{ color: textColor }}>
-                  {badgeText}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  marginBottom: "5px",
+                }}
+              >
+                <span style={{ fontSize: "11px", color: "var(--text-secondary)", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {extractLabel(f.industryBenchmarkNote)}
+                </span>
+                <span style={{ fontSize: "10px", fontWeight: 500, color: textColor, flexShrink: 0, marginLeft: "8px" }}>
+                  {summary}
                 </span>
               </div>
-              <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(255,255,255,0.06)" }}>
+              {/* Track */}
+              <div
+                style={{
+                  width: "100%",
+                  height: "3px",
+                  borderRadius: "2px",
+                  backgroundColor: "var(--bg-elevated)",
+                  overflow: "hidden",
+                }}
+              >
                 <div
-                  className="h-full rounded-full transition-all duration-1000"
-                  style={{ width: `${pct}%`, backgroundColor: barColor }}
+                  style={{
+                    height: "100%",
+                    width: `${pct}%`,
+                    backgroundColor: barColor,
+                    borderRadius: "2px",
+                    opacity: 0.7,
+                    transition: "width 1.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}
                 />
               </div>
-              <div className="text-[8px] text-gray-600 mt-0.5 leading-tight">
-                {f.industryBenchmarkNote.substring(0, 65)}{f.industryBenchmarkNote.length > 65 ? "…" : ""}
+              <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "4px", lineHeight: 1.4 }}>
+                {f.industryBenchmarkNote.substring(0, 72)}{f.industryBenchmarkNote.length > 72 ? "…" : ""}
               </div>
             </div>
           );
         })}
       </div>
-      <div className="text-[8px] text-gray-700 mt-3 italic">* AI-estimated benchmark — not verified legal data</div>
+
+      <div style={{ fontSize: "9px", color: "var(--text-disabled)", marginTop: "12px", fontStyle: "italic" }}>
+        AI-estimated benchmark — not verified legal data
+      </div>
     </div>
   );
 }

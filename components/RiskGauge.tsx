@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 
 interface RiskGaugeProps {
-  score: number; // overall risk score (0–100); converted to safety internally
+  score: number;
   critical: number;
   high: number;
   medium: number;
   safe: number;
 }
 
-function useCountUp(target: number, duration = 1000) {
+function useCountUp(target: number, duration = 900) {
   const [value, setValue] = useState(0);
   useEffect(() => {
     if (target === 0) { setValue(0); return; }
@@ -27,33 +27,38 @@ function useCountUp(target: number, duration = 1000) {
   return value;
 }
 
-// Safety score = 100 - riskScore. High safety = green, low safety = red.
-function safetyColor(s: number) {
-  if (s >= 70) return "#22C55E";  // very safe  → green
-  if (s >= 40) return "#EAB308";  // moderate   → amber
-  if (s >= 20) return "#F97316";  // low safety → orange
-  return "#EF4444";               // unsafe     → red
+function safetyColor(s: number): string {
+  if (s >= 70) return "var(--risk-safe)";
+  if (s >= 40) return "var(--risk-medium)";
+  if (s >= 20) return "var(--risk-high)";
+  return "var(--risk-critical)";
 }
 
-function safetyLabel(s: number) {
-  if (s >= 70) return "VERY SAFE";
-  if (s >= 40) return "MODERATE";
-  if (s >= 20) return "LOW SAFETY";
-  return "UNSAFE";
+function safetyLabel(s: number): string {
+  if (s >= 70) return "Low Risk";
+  if (s >= 40) return "Moderate";
+  if (s >= 20) return "Elevated";
+  return "High Risk";
 }
+
+const STAT_LABELS = [
+  { key: "critical", label: "Critical", colorVar: "--risk-critical", bgVar: "--risk-critical-bg", borderVar: "--risk-critical-border" },
+  { key: "high",     label: "High",     colorVar: "--risk-high",     bgVar: "--risk-high-bg",     borderVar: "--risk-high-border" },
+  { key: "medium",   label: "Medium",   colorVar: "--risk-medium",   bgVar: "--risk-medium-bg",   borderVar: "--risk-medium-border" },
+  { key: "safe",     label: "Safe",     colorVar: "--risk-safe",     bgVar: "--risk-safe-bg",     borderVar: "--risk-safe-border" },
+];
 
 export default function RiskGauge({ score, critical, high, medium, safe }: RiskGaugeProps) {
-  const riskScore    = Math.min(100, Math.max(0, score || 0));
-  const safetyScore  = 100 - riskScore;           // invert: high = safer
-  const color        = safetyColor(safetyScore);
-  const label        = safetyLabel(safetyScore);
+  const riskScore   = Math.min(100, Math.max(0, score || 0));
+  const safetyScore = 100 - riskScore;
+  const color       = safetyColor(safetyScore);
+  const label       = safetyLabel(safetyScore);
 
-  const radius       = 50;
-  const cx           = 70;
-  const cy           = 62;                        // arc baseline
+  const radius      = 48;
+  const cx          = 68;
+  const cy          = 60;
   const circumference = Math.PI * radius;
 
-  // Arc fill represents safety: more fill = safer
   const [offset, setOffset] = useState(circumference);
   useEffect(() => {
     const t = setTimeout(() => {
@@ -62,78 +67,104 @@ export default function RiskGauge({ score, critical, high, medium, safe }: RiskG
     return () => clearTimeout(t);
   }, [safetyScore, circumference]);
 
-  // sweep-flag=0 → top semicircle (left→top→right), stays inside viewBox
   const arcPath = `M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 0 ${cx + radius} ${cy}`;
 
-  const stats = [
-    { label: "CRITICAL", count: critical, bg: "rgba(239,68,68,0.18)",  border: "rgba(239,68,68,0.4)",  text: "#fca5a5" },
-    { label: "HIGH",     count: high,     bg: "rgba(249,115,22,0.18)", border: "rgba(249,115,22,0.4)", text: "#fdba74" },
-    { label: "MEDIUM",   count: medium,   bg: "rgba(234,179,8,0.18)",  border: "rgba(234,179,8,0.4)",  text: "#fde047" },
-    { label: "SAFE",     count: safe,     bg: "rgba(34,197,94,0.18)",  border: "rgba(34,197,94,0.4)",  text: "#86efac" },
+  const counts = [
+    useCountUp(critical, 900),
+    useCountUp(high,     900),
+    useCountUp(medium,   900),
+    useCountUp(safe,     900),
   ];
 
-  const animCounts = [
-    useCountUp(critical, 1000),
-    useCountUp(high,     1000),
-    useCountUp(medium,   1000),
-    useCountUp(safe,     1000),
-  ];
+  const statValues = [critical, high, medium, safe];
 
   return (
-    <div className="flex flex-col items-center gap-2 py-2">
-      {/* All gauge content inside SVG — no negative margins, no overlap */}
-      <svg width="140" height="100" viewBox="0 0 140 100">
-        {/* Background track */}
-        <path d={arcPath} fill="none" stroke="#2a3a4a" strokeWidth="10" strokeLinecap="round" />
-        {/* Safety fill */}
-        <path
-          d={arcPath}
-          fill="none"
-          stroke={color}
-          strokeWidth="10"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset 1.5s ease, stroke 0.3s ease" }}
-        />
-        {/* Side labels */}
-        <text x="14"  y={cy + 18} fontSize="10" fill="#6B7280" textAnchor="middle">0</text>
-        <text x="126" y={cy + 18} fontSize="10" fill="#6B7280" textAnchor="middle">100</text>
-        {/* Score number centred in the arc bowl */}
-        <text x={cx} y={cy - 14} fontSize="34" fontWeight="700" fill={color} textAnchor="middle" fontFamily="Georgia, serif">
-          {safetyScore}
-        </text>
-        {/* "out of 100" */}
-        <text x={cx} y={cy - 1} fontSize="10" fill="#6B7280" textAnchor="middle" fontFamily="system-ui">
-          out of 100
-        </text>
-        {/* Verdict label */}
-        <text x={cx} y={cy + 36} fontSize="11" fontWeight="600" fill={color} textAnchor="middle" fontFamily="system-ui" letterSpacing="1">
-          {label}
-        </text>
-        {/* "SAFETY SCORE" subtitle */}
-        <text x={cx} y={cy + 50} fontSize="9" fill="#6B7280" textAnchor="middle" fontFamily="system-ui" letterSpacing="1">
-          SAFETY SCORE
-        </text>
-      </svg>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", fontFamily: "var(--font-sans)" }}>
 
-      {/* Stat boxes — muted when count is 0 */}
-      <div className="grid grid-cols-2 gap-2 w-full">
-        {stats.map(({ label: l, bg, border, text, count }, i) => {
+      {/* Gauge SVG */}
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <svg width="136" height="96" viewBox="0 0 136 96">
+          {/* Track */}
+          <path d={arcPath} fill="none" stroke="var(--bg-elevated)" strokeWidth="8" strokeLinecap="round" />
+          {/* Fill */}
+          <path
+            d={arcPath}
+            fill="none"
+            stroke={color}
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            opacity="0.85"
+            style={{ transition: "stroke-dashoffset 1.4s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.4s ease" }}
+          />
+          {/* 0 label */}
+          <text x="16" y={cy + 16} fontSize="9" fill="var(--text-disabled)" textAnchor="middle"
+            fontFamily="Inter, system-ui">0</text>
+          {/* 100 label */}
+          <text x="120" y={cy + 16} fontSize="9" fill="var(--text-disabled)" textAnchor="middle"
+            fontFamily="Inter, system-ui">100</text>
+          {/* Score */}
+          <text x={cx} y={cy - 12} fontSize="30" fontWeight="500" fill={color}
+            textAnchor="middle" fontFamily="Instrument Serif, Georgia, serif">
+            {safetyScore}
+          </text>
+          {/* out of */}
+          <text x={cx} y={cy + 1} fontSize="9" fill="var(--text-muted)" textAnchor="middle"
+            fontFamily="Inter, system-ui">
+            out of 100
+          </text>
+          {/* Label */}
+          <text x={cx} y={cy + 32} fontSize="10" fontWeight="500" fill={color}
+            textAnchor="middle" fontFamily="Inter, system-ui" letterSpacing="0.06em">
+            {label.toUpperCase()}
+          </text>
+          {/* Subtitle */}
+          <text x={cx} y={cy + 46} fontSize="8.5" fill="var(--text-muted)"
+            textAnchor="middle" fontFamily="Inter, system-ui" letterSpacing="0.08em">
+            SAFETY SCORE
+          </text>
+        </svg>
+      </div>
+
+      {/* Stat grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+        {STAT_LABELS.map(({ label: l, colorVar, bgVar, borderVar }, i) => {
+          const count   = statValues[i];
           const isEmpty = count === 0;
           return (
             <div
               key={l}
-              className="rounded-lg p-2 text-center"
               style={{
-                backgroundColor: isEmpty ? "rgba(255,255,255,0.03)" : bg,
-                border: `1px solid ${isEmpty ? "rgba(255,255,255,0.07)" : border}`,
+                padding: "10px 12px",
+                borderRadius: "var(--r-sm)",
+                textAlign: "center",
+                backgroundColor: isEmpty ? "var(--bg-elevated)" : `var(${bgVar})`,
+                border: `1px solid ${isEmpty ? "var(--border)" : `var(${borderVar})`}`,
               }}
             >
-              <div className="text-xl font-bold" style={{ color: isEmpty ? "#4b5563" : text, fontFamily: "Georgia, serif" }}>
-                {animCounts[i]}
+              <div
+                style={{
+                  fontSize: "22px",
+                  fontWeight: 500,
+                  fontFamily: "var(--font-display)",
+                  color: isEmpty ? "var(--text-disabled)" : `var(${colorVar})`,
+                  lineHeight: 1.1,
+                  marginBottom: "3px",
+                }}
+              >
+                {counts[i]}
               </div>
-              <div className="text-[9px] tracking-widest" style={{ color: isEmpty ? "#4b5563" : text, opacity: isEmpty ? 0.6 : 0.7 }}>
+              <div
+                style={{
+                  fontSize: "9px",
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: isEmpty ? "var(--text-disabled)" : `var(${colorVar})`,
+                  opacity: isEmpty ? 0.5 : 0.7,
+                }}
+              >
                 {l}
               </div>
             </div>

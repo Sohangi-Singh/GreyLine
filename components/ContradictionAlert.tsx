@@ -14,79 +14,143 @@ export default function ContradictionAlert({ contradictions, onClauseClick }: Co
   if (contradictions.length === 0) {
     return (
       <div
-        className="flex items-center gap-4 px-5 rounded-lg"
         style={{
-          paddingTop: "20px",
-          paddingBottom: "20px",
-          border: "1px solid rgba(34,197,94,0.25)",
-          backgroundColor: "rgba(34,197,94,0.07)",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          padding: "14px 18px",
+          borderRadius: "var(--r-md)",
+          backgroundColor: "rgba(122,158,138,0.07)",
+          border: "1px solid rgba(122,158,138,0.16)",
+          fontFamily: "var(--font-sans)",
         }}
       >
-        <span style={{ fontSize: "20px", color: "#22C55E", lineHeight: 1 }}>✓</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--risk-safe)" strokeWidth="1.5">
+          <polyline points="2 8.5 6 12.5 14 4" />
+        </svg>
         <div>
-          <div style={{ fontSize: "16px", fontWeight: 500, color: "#4ade80", letterSpacing: "0.01em" }}>
+          <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--risk-safe)" }}>
             No contradictions detected
           </div>
-          <div className="text-xs text-emerald-700 mt-0.5">Document is internally consistent</div>
+          <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+            Document is internally consistent
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg overflow-hidden" style={{ border: "1px solid rgba(239,68,68,0.35)" }}>
+    <div
+      style={{
+        borderRadius: "var(--r-md)",
+        border: "1px solid var(--risk-critical-border)",
+        overflow: "hidden",
+        fontFamily: "var(--font-sans)",
+      }}
+    >
       <button
-        className="w-full flex items-center gap-4 px-5 text-left hover:bg-red-500/10 transition-colors"
-        style={{ backgroundColor: "rgba(239,68,68,0.08)", paddingTop: "20px", paddingBottom: "20px" }}
         onClick={() => setExpanded(!expanded)}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          padding: "14px 18px",
+          backgroundColor: "var(--risk-critical-bg)",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
+          transition: "background-color 0.15s ease",
+        }}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = "rgba(192,122,90,0.12)")}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--risk-critical-bg)")}
       >
-        <span style={{ fontSize: "20px", color: "#EF4444", lineHeight: 1 }}>⚡</span>
-        <div className="flex-1">
-          <div style={{ fontSize: "16px", fontWeight: 500, color: "#f87171" }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--risk-critical)" strokeWidth="1.5" style={{ flexShrink: 0 }}>
+          <path d="M8 2L14.5 13H1.5L8 2Z" />
+          <line x1="8" y1="7" x2="8" y2="9.5" />
+          <circle cx="8" cy="11.5" r="0.6" fill="var(--risk-critical)" />
+        </svg>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--risk-critical)" }}>
             {contradictions.length} contradiction{contradictions.length > 1 ? "s" : ""} detected
           </div>
           {!expanded && (
-            <div className="text-xs mt-0.5" style={{ color: "#EF444480" }}>
-              {contradictions[0].clauseAId} directly conflicts with {contradictions[0].clauseBId}
+            <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+              {contradictions[0].clauseAId} conflicts with {contradictions[0].clauseBId}
             </div>
           )}
         </div>
-        <span className="text-xs" style={{ color: "#EF444460" }}>{expanded ? "▲ HIDE" : "▼ VIEW"}</span>
+        <span style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.06em" }}>
+          {expanded ? "Hide" : "View"}
+        </span>
       </button>
 
       {expanded && (
-        <div className="divide-y divide-amber-500/10">
+        <div
+          style={{
+            borderTop: "1px solid var(--risk-critical-border)",
+          }}
+        >
           {contradictions.map((c, i) => (
-            <div key={i} className="px-4 py-4" style={{ backgroundColor: "rgba(234,179,8,0.04)" }}>
-              <div className="flex items-start gap-3">
+            <div
+              key={i}
+              style={{
+                padding: "14px 18px",
+                borderBottom: i < contradictions.length - 1 ? "1px solid var(--border)" : "none",
+                backgroundColor: "var(--bg-surface)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
                 <span
-                  className="text-xs font-bold px-2 py-0.5 rounded border mt-0.5 flex-shrink-0"
                   style={{
-                    color: c.severity === "critical" ? "#EF4444" : c.severity === "high" ? "#F97316" : "#EAB308",
-                    borderColor: c.severity === "critical" ? "#EF444430" : c.severity === "high" ? "#F9731630" : "#EAB30830",
-                    backgroundColor: c.severity === "critical" ? "#EF444410" : c.severity === "high" ? "#F9731610" : "#EAB30810",
+                    flexShrink: 0,
+                    fontSize: "9px",
+                    fontWeight: 600,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    marginTop: "2px",
+                    color:
+                      c.severity === "critical" ? "var(--risk-critical)"
+                      : c.severity === "high"   ? "var(--risk-high)"
+                      : "var(--risk-medium)",
+                    backgroundColor:
+                      c.severity === "critical" ? "var(--risk-critical-bg)"
+                      : c.severity === "high"   ? "var(--risk-high-bg)"
+                      : "var(--risk-medium-bg)",
+                    border: `1px solid ${
+                      c.severity === "critical" ? "var(--risk-critical-border)"
+                      : c.severity === "high"   ? "var(--risk-high-border)"
+                      : "var(--risk-medium-border)"
+                    }`,
                   }}
                 >
-                  {c.severity.toUpperCase()}
+                  {c.severity}
                 </span>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" }}>
                     <button
-                      className="text-xs text-indigo-400 hover:text-indigo-300 underline"
                       onClick={() => onClauseClick?.(c.clauseAId)}
+                      style={{ fontSize: "11px", color: "var(--flora)", fontWeight: 500, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: "2px" }}
                     >
                       {c.clauseAId}
                     </button>
-                    <span className="text-gray-600 text-xs">conflicts with</span>
+                    <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>conflicts with</span>
                     <button
-                      className="text-xs text-indigo-400 hover:text-indigo-300 underline"
                       onClick={() => onClauseClick?.(c.clauseBId)}
+                      style={{ fontSize: "11px", color: "var(--flora)", fontWeight: 500, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: "2px" }}
                     >
                       {c.clauseBId}
                     </button>
                   </div>
-                  <p className="text-xs text-gray-400 italic mb-1">{c.contradiction}</p>
-                  <p className="text-xs text-amber-300/80">{c.plainEnglish}</p>
+                  <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.55, fontStyle: "italic", marginBottom: "4px" }}>
+                    {c.contradiction}
+                  </p>
+                  <p style={{ fontSize: "11px", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                    {c.plainEnglish}
+                  </p>
                 </div>
               </div>
             </div>

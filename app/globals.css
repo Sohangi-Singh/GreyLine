@@ -2,44 +2,162 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Design Tokens — Dark (default) ────────────────────── */
+:root {
+  color-scheme: dark;
+
+  /* Backgrounds — warm charcoal */
+  --bg-base:     #131210;
+  --bg-surface:  #1A1916;
+  --bg-elevated: #211F1B;
+  --bg-hover:    #272420;
+
+  /* Brand palette */
+  --flora:        #848170;
+  --flora-dim:    rgba(132, 129, 112, 0.12);
+  --flora-border: rgba(132, 129, 112, 0.22);
+  --sage:         #B1B09C;
+  --ethereal:     #D8DACA;
+
+  /* Text */
+  --text-primary:   #D8DACA;
+  --text-secondary: #9E9C8B;
+  --text-muted:     #6B6960;
+  --text-disabled:  #4A4840;
+
+  /* Borders */
+  --border:        rgba(177, 176, 156, 0.09);
+  --border-medium: rgba(177, 176, 156, 0.16);
+  --border-strong: rgba(177, 176, 156, 0.26);
+
+  /* Risk */
+  --risk-critical:        #C07A5A;
+  --risk-critical-bg:     rgba(192, 122, 90, 0.09);
+  --risk-critical-border: rgba(192, 122, 90, 0.18);
+  --risk-high:            #C49860;
+  --risk-high-bg:         rgba(196, 152, 96, 0.09);
+  --risk-high-border:     rgba(196, 152, 96, 0.18);
+  --risk-medium:          #A8A870;
+  --risk-medium-bg:       rgba(168, 168, 112, 0.09);
+  --risk-medium-border:   rgba(168, 168, 112, 0.18);
+  --risk-safe:            #7A9E8A;
+  --risk-safe-bg:         rgba(122, 158, 138, 0.09);
+  --risk-safe-border:     rgba(122, 158, 138, 0.18);
+
+  /* Typography */
+  --font-sans:    var(--font-inter), 'Inter', -apple-system, system-ui, sans-serif;
+  --font-display: 'Instrument Serif', Georgia, serif;
+
+  /* Radius */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+}
+
+/* ─── Design Tokens — Light ──────────────────────────────── */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Backgrounds — warm linen */
+  --bg-base:     #F4F1EC;
+  --bg-surface:  #FAF8F5;
+  --bg-elevated: #FFFFFF;
+  --bg-hover:    #EDE9E3;
+
+  /* Brand palette — slightly deepened for contrast */
+  --flora:        #6B6858;
+  --flora-dim:    rgba(107, 104, 88, 0.10);
+  --flora-border: rgba(107, 104, 88, 0.24);
+  --sage:         #7A7868;
+  --ethereal:     #1C1A16;
+
+  /* Text */
+  --text-primary:   #1C1A16;
+  --text-secondary: #4A4840;
+  --text-muted:     #7A7868;
+  --text-disabled:  #A8A598;
+
+  /* Borders */
+  --border:        rgba(107, 104, 88, 0.14);
+  --border-medium: rgba(107, 104, 88, 0.24);
+  --border-strong: rgba(107, 104, 88, 0.42);
+
+  /* Risk — slightly deeper for legibility on light */
+  --risk-critical:        #9E5438;
+  --risk-critical-bg:     rgba(158, 84, 56, 0.07);
+  --risk-critical-border: rgba(158, 84, 56, 0.18);
+  --risk-high:            #9E7232;
+  --risk-high-bg:         rgba(158, 114, 50, 0.07);
+  --risk-high-border:     rgba(158, 114, 50, 0.18);
+  --risk-medium:          #747450;
+  --risk-medium-bg:       rgba(116, 116, 80, 0.07);
+  --risk-medium-border:   rgba(116, 116, 80, 0.18);
+  --risk-safe:            #3E7058;
+  --risk-safe-bg:         rgba(62, 112, 88, 0.07);
+  --risk-safe-border:     rgba(62, 112, 88, 0.18);
+}
+
+/* ─── Base Reset ─────────────────────────────────────────── */
 @layer base {
-  :root {
-    --background: 15 22 35;
-    --foreground: 226 232 240;
-    --border: 255 255 255 / 0.08;
-    --ring: 99 102 241;
-    --radius: 0.5rem;
-  }
-  * {
-    border-color: rgba(255, 255, 255, 0.08);
-  }
+  * { box-sizing: border-box; }
+
   body {
-    background-color: #0F1623;
-    color: #e2e8f0;
-    font-family: system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(132, 129, 112, 0.25);
+    color: var(--ethereal);
   }
 }
 
-@keyframes float-doc {
-  0%, 100% {
-    transform: translateY(0px) rotate(-3deg);
-    opacity: 0.04;
-  }
-  50% {
-    transform: translateY(-20px) rotate(3deg);
-    opacity: 0.07;
-  }
+/* ─── Scrollbars ─────────────────────────────────────────── */
+::-webkit-scrollbar             { width: 3px; height: 3px; }
+::-webkit-scrollbar-track       { background: transparent; }
+::-webkit-scrollbar-thumb       { background: var(--border-strong); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--flora); }
+
+/* ─── Keyframes ──────────────────────────────────────────── */
+@keyframes gl-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
 }
 
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes gl-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.4s ease-out forwards;
+@keyframes gl-pulse-soft {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1;   }
 }
+
+@keyframes gl-border-breathe {
+  0%, 100% { border-color: rgba(132, 129, 112, 0.18); }
+  50%       { border-color: rgba(132, 129, 112, 0.34); }
+}
+
+@keyframes gl-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ─── Utility classes ────────────────────────────────────── */
+.gl-fade-up      { animation: gl-fade-up  0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.gl-fade-in      { animation: gl-fade-in  0.4s ease both; }
+.gl-pulse-soft   { animation: gl-pulse-soft 2s ease-in-out infinite; }
+.gl-spin         { animation: gl-spin 1.2s linear infinite; }
+.gl-border-breathe { animation: gl-border-breathe 3s ease-in-out infinite; }
+
+.animate-fade-in { animation: gl-fade-in 0.4s ease both; }
 
 .line-clamp-2 {
   display: -webkit-box;
@@ -48,10 +166,52 @@
   overflow: hidden;
 }
 
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
-::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.5); }
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── Shared panel surface ───────────────────────────────── */
+.gl-surface {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+.gl-surface-elevated {
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+/* ─── Divider ────────────────────────────────────────────── */
+.gl-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-medium), transparent);
+}
+
+/* ─── Label style ────────────────────────────────────────── */
+.gl-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ─── Noise texture overlay (subtle) ────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
