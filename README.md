@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Greyline — Adversarial AI Contract Intelligence
 
-## Getting Started
+> Read before you sign. Understand before you agree.
 
-First, run the development server:
+Greyline uses 6 sequential AI agents powered by Google Gemini to analyze legal contracts with prosecutor vs. defender adversarial debate, contradiction detection, risk scoring, and negotiation scripts.
+
+## Quick Start
 
 ```bash
+# 1. Copy env file
+cp .env.local.example .env.local
+# 2. Add your Gemini API key (free at https://aistudio.google.com/apikey)
+# 3. Install and run
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 6-Agent Architecture
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Agent | Role | Execution |
+|-------|------|-----------|
+| Extractor | Parses all clauses from document | Sequential (first) |
+| Prosecutor | Finds every risk & compliance issue | Parallel |
+| Defender | Counters each risk with industry context | Parallel |
+| Contradiction Detector | Finds internal document conflicts | Parallel |
+| Judge | Scores each clause 0–100, delivers verdict | Sequential |
+| Negotiator | Rewrites high-risk clauses with scripts | Sequential (last) |
 
-## Learn More
+## Features
 
-To learn more about Next.js, take a look at the following resources:
+- **Prosecutor vs Defender debate** — adversarial AI arguments on every clause
+- **Contradiction detection** — flags when a document contradicts itself
+- **Risk gauge** — animated 0–100 score with DANGER/WARNING/CAUTION/SAFE verdicts
+- **Scenario simulations** — what could actually happen with each risky clause
+- **Negotiation scripts** — exact words to say when requesting changes
+- **ELI5 mode** — explains clauses with memorable analogies
+- **PDF export** — full branded analysis report
+- **5 input types** — PDF, DOCX, image/photo (OCR), paste text, URL
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Supported Documents
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Employment contracts
+- Terms of service / privacy policies
+- Rental agreements
+- Any legal document in PDF, DOCX, image, or text format
 
-## Deploy on Vercel
+## Cloud Run Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+docker build -t greyline .
+docker run -p 3000:3000 -e GEMINI_API_KEY=your_key greyline
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For GCP Cloud Run:
+```bash
+gcloud run deploy greyline \
+  --source . \
+  --set-env-vars GEMINI_API_KEY=your_key \
+  --region us-central1 \
+  --allow-unauthenticated
+```
+
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router) + TypeScript
+- **AI**: Google Gemini 2.0 Flash via @google/generative-ai
+- **UI**: Tailwind CSS + shadcn/ui + Framer Motion
+- **Parsing**: pdf-parse, mammoth, tesseract.js, cheerio
+- **Export**: jsPDF
+- **Upload**: react-dropzone
+
+---
+
+*Not legal advice. For educational and negotiation assistance only.*
