@@ -1,101 +1,153 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import LandingHero from "@/components/LandingHero";
+import ProcessingScreen from "@/components/ProcessingScreen";
+import AnalysisDashboard from "@/components/AnalysisDashboard";
+import { AnalysisResult } from "@/lib/types";
+import { EMPLOYMENT_CONTRACT_SAMPLE } from "@/data/employment_contract_sample";
+import { APP_TOS_SAMPLE } from "@/data/app_tos_sample";
+import { RENTAL_AGREEMENT_SAMPLE } from "@/data/rental_agreement_sample";
+
+type AppState = "landing" | "processing" | "results";
+
+interface AgentStatusMap {
+  [key: string]: {
+    agent: string;
+    status: "waiting" | "running" | "complete" | "error";
+    clauseCount?: number;
+    contradictionsFound?: number;
+  };
+}
+
+const SAMPLE_MAP: Record<string, string> = {
+  employment: EMPLOYMENT_CONTRACT_SAMPLE,
+  tos: APP_TOS_SAMPLE,
+  rental: RENTAL_AGREEMENT_SAMPLE,
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [appState, setAppState] = useState<AppState>("landing");
+  const [agentStatuses, setAgentStatuses] = useState<AgentStatusMap>({});
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleSubmit = async (data: {
+    file?: File;
+    text?: string;
+    url?: string;
+    sampleKey?: string;
+    documentType: string;
+  }) => {
+    setAppState("processing");
+    setAgentStatuses({});
+    setError(null);
+
+    try {
+      const formData = new FormData();
+
+      if (data.sampleKey) {
+        const sampleText = SAMPLE_MAP[data.sampleKey];
+        if (!sampleText) throw new Error("Unknown sample key");
+        formData.append("sampleText", sampleText);
+        formData.append("documentType", data.sampleKey);
+      } else if (data.text) {
+        formData.append("text", data.text);
+        formData.append("documentType", "text");
+      } else if (data.url) {
+        formData.append("url", data.url);
+        formData.append("documentType", "url");
+      } else if (data.file) {
+        formData.append("file", data.file);
+        formData.append("documentType", data.documentType);
+      }
+
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Analysis request failed");
+      if (!response.body) throw new Error("No response stream");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+
+            if (event.type === "final") {
+              setAnalysis(event.analysis);
+              setAppState("results");
+              return;
+            }
+
+            if (event.type === "error") {
+              setError(event.message ?? "Analysis failed");
+              setAppState("landing");
+              return;
+            }
+
+            if (event.agent) {
+              setAgentStatuses((prev) => ({
+                ...prev,
+                [event.agent]: {
+                  agent: event.agent,
+                  status: event.status,
+                  clauseCount: event.clauseCount,
+                  contradictionsFound: event.contradictionsFound,
+                },
+              }));
+            }
+          } catch {
+            // skip malformed event
+          }
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Analysis failed";
+      setError(message);
+      setAppState("landing");
+    }
+  };
+
+  const handleReset = () => {
+    setAppState("landing");
+    setAnalysis(null);
+    setAgentStatuses({});
+    setError(null);
+  };
+
+  if (appState === "processing") {
+    return <ProcessingScreen agentStatuses={agentStatuses} />;
+  }
+
+  if (appState === "results" && analysis) {
+    return <AnalysisDashboard analysis={analysis} onReset={handleReset} />;
+  }
+
+  return (
+    <main style={{ backgroundColor: "#0F1623" }}>
+      {error && (
+        <div
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg border text-sm"
+          style={{ backgroundColor: "rgba(239,68,68,0.15)", borderColor: "rgba(239,68,68,0.4)", color: "#fca5a5" }}
+        >
+          ⚠ {error}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      )}
+      <LandingHero onSubmit={handleSubmit} loading={false} />
+    </main>
   );
 }
